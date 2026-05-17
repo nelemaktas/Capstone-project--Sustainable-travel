@@ -1,3 +1,5 @@
+# Import requirements
+
 import streamlit as st
 import pandas as pd
 import os
@@ -5,10 +7,38 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 @st.cache_data
-def load_data():
-    return pd.read_csv("routes_play.csv")
 
-routes_play = load_data()
+
+# DATA CLEANING PIPELINE
+# Routes_play is already cleaned. This pipeline is still included so that you can import a raw dataset with only route, distance, fares, and times.
+
+def load_and_clean_data(path="routes_play.csv"):
+    routes = pd.read_csv(path)
+    routes_play = routes.copy()
+    routes_play = routes_play[['route','distance_km','air_fare_eur','rail_fare_eur','air_time_mins','rail_time_mins','cheap_flight','info']]
+
+    column_defs = {
+        'air_co2_kg': routes_play['distance_km'] * 171 / 1000,
+        'rail_co2_kg': 0,
+        'air_time_hrs': routes_play['air_time_mins'] / 60,
+        'rail_time_hrs': routes_play['rail_time_mins'] / 60,
+    }
+
+    for new_column, column_def in column_defs.items():
+        routes_play[new_column] = column_def
+        
+    routes_play['distance_label'] = pd.cut(
+         routes_play['distance_km'],
+        bins=[0, 250, 500, 750, routes['distance_km'].max() + 1],
+        labels=[1, 2, 3, 4],
+        right=False
+        ).astype(int)
+        
+        # make origin and destination column from scratch
+    return routes_play
+
+routes_play = load_and_clean_data(path="routes_play.csv")
+
 
 
 
@@ -25,7 +55,7 @@ st.sidebar.header("Adjust assumptions for generalised cost")
 value_of_time = st.sidebar.slider(
     "Value of time (€/hour)", 0, 50, 10, help="Might for example be higher for business travellers.")
 airport_overhead = st.sidebar.slider(
-    "Airport overhead (hours)", 0.0, 5.0, 4.0)
+    "Airport overhead (hours)", 0.0, 5.0, 3.0)
 station_overhead = st.sidebar.slider(
     "Train station overhead (hours)", 0.0, 2.0, 0.5)
 baggage_fee = st.sidebar.slider(
@@ -105,28 +135,28 @@ df = calculate_generalised_cost(
 
 
 
-
-
-
-
-
-
 # FIRST VISUAL (TIME GAP)
 
-price_gap_adjusted = routes_play['rail_fare_eur'] - routes_play['air_fare_eur'] - baggage_fee * routes_play['cheap_flight'] # attention: this will overwrite time_gap
+price_gap_adjusted = routes_play['rail_fare_eur'] - routes_play['air_fare_eur'] - baggage_fee * routes_play['cheap_flight']
 time_gap_adjusted = routes_play['rail_time_hrs'] - routes_play['air_time_hrs'] - airport_overhead + station_overhead
 
 
-# def calculate_time_gap_adjusted(air_overhead=airport_overhead, station_overhead=station_overhead):
-#     time_gap_adjusted = routes_play['rail_time_hrs'] - routes_play['air_time_hrs'] - air_overhead + station_overhead
-#     return time_gap_adjusted
+# Annotations for each quadrant
+x_vals = time_gap_adjusted
+y_vals = price_gap_adjusted
 
+quadrant_masks = {
+    "Slower & More Expensive": (x_vals > 0) & (y_vals > 0),
+    "Faster & More Expensive": (x_vals <= 0) & (y_vals > 0),
+    "Faster & Cheaper": (x_vals <= 0) & (y_vals <= 0),
+    "Slower & Cheaper": (x_vals > 0) & (y_vals <= 0)
+}
+quadrant_counts = {k: mask.sum() for k, mask in quadrant_masks.items()}
 
 fig1 = px.scatter(
     routes_play, x=time_gap_adjusted, y=price_gap_adjusted,
-    # routes_play, x=calculate_time_gap_adjusted(air_overhead=airport_overhead, station_overhead=station_overhead), y=price_gap_adjusted,
     hover_data=['route'],
-    title='Slower does not always mean cheaper. Actually, rail is often faster',
+    title=f"Besides being slower, rail is also more expensive on {quadrant_counts['Slower & More Expensive']} routes",
     labels={'x': 'Time Gap: Rail Time - Air Time (hrs)', 'y': 'Price Gap: Rail Fare - Air Fare (€)'}
 )
 
@@ -135,28 +165,30 @@ fig1.add_vline(x=0, line_dash="dash", line_color="black")
 fig1.add_hline(y=0, line_dash="dash", line_color="black")
 
 
-# Annotations for each quadrant
-x_vals = time_gap_adjusted
-y_vals = price_gap_adjusted
-
+# Create labels for each quadrant
 x_min, x_max = x_vals.min(), x_vals.max()
 y_min, y_max = y_vals.min(), y_vals.max()
 
+# Midpoints of each quadrant
 x_pos_right = (0 + x_max) / 2
 x_pos_left  = (0 + x_min-2) / 2
 y_pos_top   = (0 + y_max+1) / 2
 y_pos_bottom= (0 + y_min-1) / 2
 
 # Add annotations in correct quadrants
-fig1.add_annotation(x=x_pos_right, y=y_pos_top,
-                            text="Slower & <br>More Expensive", showarrow=False)
-fig1.add_annotation(x=x_pos_left, y=y_pos_top,
-                            text="Faster & <br>More Expensive", showarrow=False)
-fig1.add_annotation(x=x_pos_left, y=y_pos_bottom,
-                            text="Faster & <br>Cheaper", showarrow=False)
-fig1.add_annotation(x=x_pos_right, y=y_pos_bottom,
-                            text="Slower & <br>Cheaper", showarrow=False)
 
+fig1.add_annotation(x=x_pos_right, y=y_pos_top,
+                          text=f"Slower & <br>More Expensive<br>({quadrant_counts['Slower & More Expensive']} routes)",
+                          showarrow=False)
+fig1.add_annotation(x=x_pos_left, y=y_pos_top,
+                          text=f"Faster & <br>More Expensive<br>({quadrant_counts['Faster & More Expensive']} routes)",
+                          showarrow=False)
+fig1.add_annotation(x=x_pos_left, y=y_pos_bottom,
+                          text=f"Faster & <br>Cheaper<br>({quadrant_counts['Faster & Cheaper']} routes)",
+                          showarrow=False)
+fig1.add_annotation(x=x_pos_right, y=y_pos_bottom,
+                           text=f"Slower & <br>Cheaper<br>({quadrant_counts['Slower & Cheaper']} routes)",
+                           showarrow=False)
 
 fig1.update_layout(
     title_subtitle_text="Time difference vs. price difference. Taking the train is...",
@@ -213,13 +245,13 @@ fig2.update_layout(
     title_subtitle_font_size=12,
     title_subtitle_font_color="gray")
 
-st.plotly_chart(fig2, use_container_width=True)
+st.plotly_chart(fig2, width='stretch')
 
 
 
 
 
-## INCLUDING THE CUTOFF
+## CUTOFF OF COMPETITIVENESS
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
@@ -283,7 +315,7 @@ fig3.update_layout(
     title_subtitle_font_color="gray")
 fig3.add_hline(y=0, line_width=2, line_color='black')  
 
-st.plotly_chart(fig3, use_container_width=True)
+st.plotly_chart(fig3, width='stretch')
 
 
 
@@ -349,7 +381,7 @@ fig4 = px.bar(
 
 fig4.add_vline(x=0, line_width=2, line_color="black")
 fig4.update_layout(
-    legend_title_text="Winner",
+    legend_title_text="winner",
     height=400 + 10 * len(routes_play_3_sorted)
 )
 fig4.update_yaxes(
@@ -363,4 +395,4 @@ fig4.update_layout(
     title_subtitle_font_size=12,
     title_subtitle_font_color="gray")
 
-st.plotly_chart(fig4, use_container_width=True)
+st.plotly_chart(fig4, width='stretch')
