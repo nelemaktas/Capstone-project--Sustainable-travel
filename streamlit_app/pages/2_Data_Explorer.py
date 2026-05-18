@@ -4,7 +4,7 @@ import os
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("routes.csv")
+    return pd.read_csv("streamlit_app/routes.csv")
 
 routes = load_data()
 
