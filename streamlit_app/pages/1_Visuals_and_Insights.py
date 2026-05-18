@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 # DATA CLEANING PIPELINE
 # Routes_play is already cleaned. This pipeline is still included so that you can import a raw dataset with only route, distance, fares, and times.
 
-def load_and_clean_data(path="routes_play.csv"):
+def load_and_clean_data(path="streamlit_app/routes_play.csv"):
     routes = pd.read_csv(path)
     routes_play = routes.copy()
     routes_play = routes_play[['route','distance_km','air_fare_eur','rail_fare_eur','air_time_mins','rail_time_mins','cheap_flight','info']]
