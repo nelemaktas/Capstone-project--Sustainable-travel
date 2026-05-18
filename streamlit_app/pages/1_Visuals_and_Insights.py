@@ -37,7 +37,7 @@ def load_and_clean_data(path="streamlit_app/routes_play.csv"):
         # make origin and destination column from scratch
     return routes_play
 
-routes_play = load_and_clean_data(path="routes_play.csv")
+routes_play = load_and_clean_data(path="streamlit_app/routes_play.csv")
 
 
 
