@@ -1,5 +1,6 @@
 # Capstone Project: Sustainable Travel in Europe
 This repository contains the capstone project for the spring term 2026 course "Practical Data Science: Tools for Social Good". It is an interactive Streamlit app to compare rail and air travel on more than 40 routes across Europe, enabling analysis of the competitiveness of trains based on different assumptions.
+Try the app out yourself: https://capstone-project--sustainable-travel-ht4rtfeelc62qjfrypq2jo.streamlit.app/
 
 ## Idea behind the project
 Transport accounts for roughly a fifth of global carbon dioxide emissions (1). Many environmentally conscious people therefore want to travel by train rather than take the airplane, especially for intra-continental trips. However, trains often appear quite slow and expensive compared to cheap airline offerings. Consequently, on an individual level, air travel sometimes wins, even if it is the environmentally worse choice.
