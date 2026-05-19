@@ -5,14 +5,15 @@ import pandas as pd
 import os
 import plotly.express as px
 import plotly.graph_objects as go
+from pathlib import Path
 
-@st.cache_data
-
-
+    
 # DATA CLEANING PIPELINE
 # Routes_play is already cleaned. This pipeline is still included so that you can import a raw dataset with only route, distance, fares, and times.
+BASE_DIR = Path(__file__).parent.parent
 
-def load_and_clean_data(path="streamlit_app/routes_play.csv"):
+@st.cache_data
+def load_and_clean_data(path=BASE_DIR / "routes_play.csv"):
     routes = pd.read_csv(path)
     routes_play = routes.copy()
     routes_play = routes_play[['route','distance_km','air_fare_eur','rail_fare_eur','air_time_mins','rail_time_mins','cheap_flight','info']]
@@ -37,7 +38,7 @@ def load_and_clean_data(path="streamlit_app/routes_play.csv"):
         # make origin and destination column from scratch
     return routes_play
 
-routes_play = load_and_clean_data(path="streamlit_app/routes_play.csv")
+routes_play = load_and_clean_data()
 
 
 
@@ -308,7 +309,7 @@ fig3 = px.scatter(
     labels={'distance_km': 'Distance (km)', 'gc_margin': 'GC Margin (€)', 'winner_co2_kg': 'Winner CO₂ (kg)'},
     color_discrete_map={'rail': '#1f77b4', 'air': '#9467bd'} 
 )
-
+fig3.update_yaxes(range=[-600, 600], autorange=False)
 fig3.update_layout(
     title_subtitle_text='Distance vs. Rail advantage (Generalised Cost Margin) under slider-based assumptions<br>Size represents carbon emissions for route and given means of transport',
     title_subtitle_font_size=12,

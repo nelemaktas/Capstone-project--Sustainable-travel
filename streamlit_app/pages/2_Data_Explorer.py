@@ -1,10 +1,13 @@
 import streamlit as st
 import pandas as pd
 import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent.parent
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("streamlit_app/routes.csv")
+    return pd.read_csv(BASE_DIR / "routes.csv")
 
 routes = load_data()
 
