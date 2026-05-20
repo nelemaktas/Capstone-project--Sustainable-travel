@@ -195,6 +195,7 @@ fig1.update_layout(
     title_subtitle_text="Time difference vs. price difference. Taking the train is...",
     title_subtitle_font_size=12,
     title_subtitle_font_color="gray")
+fig1.update_xaxes(range=[-15, 40], autorange=False)
 
 st.plotly_chart(fig1)
 
